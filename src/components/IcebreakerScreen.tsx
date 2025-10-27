@@ -111,10 +111,7 @@ export const IcebreakerScreen = ({
             </Button>
 
             <Button
-              onClick={() => {
-                onStartTalking?.();
-                onClose();
-              }}
+              onClick={() => onStartTalking?.()}
               className="w-full rounded-full gradient-warm shadow-soft"
             >
               I'm heading there
