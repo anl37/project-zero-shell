@@ -93,7 +93,7 @@ export const VenueSelectorDialog = ({
                 lng: place.lng,
                 distanceM,
                 matchScore: Math.min(100, Math.floor((place.rating || 0) * 20) + (place.openNow ? 5 : 0)),
-                tags: place.types?.slice(0, 3) || [],
+                tags: filterAndFormatTags(place.types || []),
                 openNow: place.openNow,
                 rating: place.rating,
                 description: place.vicinity || '',
@@ -120,6 +120,22 @@ export const VenueSelectorDialog = ({
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  };
+
+  const formatTag = (tag: string): string => {
+    return tag
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const filterAndFormatTags = (tags: string[]): string[] => {
+    // Filter out generic types
+    const genericTypes = ['point_of_interest', 'establishment', 'store', 'food'];
+    return tags
+      .filter(tag => !genericTypes.includes(tag.toLowerCase()))
+      .map(formatTag)
+      .slice(0, 3);
   };
 
   const getMatchColor = (score: number) => {
