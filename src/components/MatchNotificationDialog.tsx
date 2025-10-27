@@ -77,8 +77,7 @@ export const MatchNotificationDialog = () => {
       .eq('id', newMatch.matchId);
 
     if (error) {
-      console.error('[MatchNotification] Error updating match status:', error);
-      return;
+      console.warn('[MatchNotification] Proceeding despite status update error:', error);
     }
 
     // Start meeting in local context
