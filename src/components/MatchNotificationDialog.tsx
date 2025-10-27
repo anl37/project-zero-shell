@@ -5,6 +5,9 @@ import { IcebreakerScreen } from "@/components/IcebreakerScreen";
 import { Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useMeeting } from "@/context/MeetingContext";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface MeetingDetails {
   sharedEmojiCode: string;
@@ -15,8 +18,12 @@ interface MeetingDetails {
 
 export const MatchNotificationDialog = () => {
   const { newMatch, clearMatch } = useMatchNotifications();
+  const { startMeeting, addOrUpdateConnection } = useMeeting();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [showIcebreaker, setShowIcebreaker] = useState(false);
   const [meetingDetails, setMeetingDetails] = useState<MeetingDetails | null>(null);
+  const [matchedUserInterests, setMatchedUserInterests] = useState<string[]>([]);
   const lastMatchId = useRef<string | null>(null);
 
   // Load meeting details from database
@@ -27,7 +34,7 @@ export const MatchNotificationDialog = () => {
       const loadMeetingDetails = async () => {
         const { data, error } = await supabase
           .from('matches')
-          .select('venue_name, landmark, meet_code, shared_emoji_code')
+          .select('venue_name, landmark, meet_code, shared_emoji_code, shared_interests')
           .eq('id', newMatch.matchId)
           .single();
         
@@ -43,6 +50,7 @@ export const MatchNotificationDialog = () => {
             landmark: data.landmark || 'Main entrance',
             meetCode: data.meet_code || 'MEET0000'
           });
+          setMatchedUserInterests(data.shared_interests || []);
         }
       };
       
@@ -52,6 +60,48 @@ export const MatchNotificationDialog = () => {
 
   const handleContinue = () => {
     setShowIcebreaker(true);
+  };
+
+  const handleStartTalking = async () => {
+    if (!newMatch || !meetingDetails || !user) return;
+
+    // Update match status in database to 'talking'
+    const { error } = await supabase
+      .from('matches')
+      .update({ status: 'talking' })
+      .eq('id', newMatch.matchId);
+
+    if (error) {
+      console.error('[MatchNotification] Error updating match status:', error);
+      return;
+    }
+
+    // Start meeting in local context
+    startMeeting({
+      id: `meeting-${Date.now()}`,
+      sessionId: newMatch.matchId,
+      type: 'DIRECT',
+      userName: newMatch.matchedUserName,
+      meetCode: meetingDetails.meetCode,
+      startedAt: new Date(),
+      venue: meetingDetails.venueName,
+      landmark: meetingDetails.landmark,
+      sharedEmojiCode: meetingDetails.sharedEmojiCode,
+    });
+
+    // Add connection for Next Up tab
+    addOrUpdateConnection(
+      newMatch.matchedUserId,
+      newMatch.matchedUserName,
+      matchedUserInterests
+    );
+
+    // Close dialogs and navigate to space
+    setShowIcebreaker(false);
+    clearMatch();
+    lastMatchId.current = null;
+    setMeetingDetails(null);
+    navigate('/space');
   };
 
   if (!newMatch || !meetingDetails) return null;
@@ -104,6 +154,7 @@ export const MatchNotificationDialog = () => {
       sharedEmojiCode={meetingDetails.sharedEmojiCode}
       venueName={meetingDetails.venueName}
       landmark={meetingDetails.landmark}
+      onStartTalking={handleStartTalking}
     />
   </>
   );
