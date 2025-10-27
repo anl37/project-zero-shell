@@ -63,7 +63,12 @@ export const MatchNotificationDialog = () => {
   };
 
   const handleStartTalking = async () => {
-    if (!newMatch || !meetingDetails || !user) return;
+    console.log('[MatchNotification] handleStartTalking called', { newMatch, meetingDetails, user: !!user });
+    
+    if (!newMatch || !meetingDetails || !user) {
+      console.log('[MatchNotification] Missing required data, aborting');
+      return;
+    }
 
     // Update match status in database to 'talking'
     const { error } = await supabase
